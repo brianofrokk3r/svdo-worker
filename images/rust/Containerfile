@@ -1,0 +1,10 @@
+ARG SVDO_WORKER_BASE=localhost/svdo-worker-base:latest
+FROM ${SVDO_WORKER_BASE}
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends cargo rustc pkg-config build-essential \
+    && rm -rf /var/lib/apt/lists/*
+USER svdo
+
+CMD ["rustc", "--version"]

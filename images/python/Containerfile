@@ -1,0 +1,10 @@
+ARG SVDO_WORKER_BASE=localhost/svdo-worker-base:latest
+FROM ${SVDO_WORKER_BASE}
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+USER svdo
+
+CMD ["python3", "--version"]
