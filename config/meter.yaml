@@ -1,0 +1,44 @@
+# Default svdo-worker meter configuration.
+#
+# The current svdo-meter CLI is flag-driven. This file documents the worker's
+# stable runtime metadata contract and is reserved for svdo-meter config support
+# as it evolves.
+#
+# Keep this file orchestration-neutral. SVDO-specific values should be supplied
+# through environment variables so the same image can run local and managed work.
+
+runtime:
+  name: svdo-worker
+  workspace_env: SVDO_WORKSPACE
+  home_env: SVDO_HOME
+  temp_env: SVDO_TMPDIR
+
+capture:
+  process_lifecycle: true
+  stdout: true
+  stderr: true
+  timing: true
+  environment_metadata: true
+  provider_events: auto
+  token_usage: auto
+  cost: auto
+  tool_calls: auto
+
+metadata:
+  environment_allowlist:
+    - SVDO_TICKET_ID
+    - SVDO_WORK_UNIT_ID
+    - SVDO_REPOSITORY_ID
+    - SVDO_REPOSITORY_URL
+    - SVDO_AGENT
+    - SVDO_MODEL
+    - SVDO_RUN_ID
+    - SVDO_SESSION_ID
+    - SVDO_PROVIDER_SESSION_ID
+    - SVDO_ATTEMPT
+    - SVDO_PARENT_RUN_ID
+
+output:
+  mode: file
+  directory: "${SVDO_TMPDIR}/meter"
+  format: jsonl
