@@ -1,10 +1,21 @@
 ARG SVDO_WORKER_BASE=localhost/svdo-worker-base:latest
 FROM ${SVDO_WORKER_BASE}
+ARG CODEX_CLI_PACKAGE=@openai/codex
+ARG CLAUDE_CLI_PACKAGE=@anthropic-ai/claude-code
+ENV CODEX_HOME=/home/svdo/.codex
+ENV CLAUDE_CONFIG_DIR=/home/svdo/.claude
 
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p "${CODEX_HOME}" "${CLAUDE_CONFIG_DIR}" \
+    && chown -R svdo:svdo "${CODEX_HOME}" "${CLAUDE_CONFIG_DIR}" \
+    && npm install -g "${CODEX_CLI_PACKAGE}" "${CLAUDE_CLI_PACKAGE}" \
+    && command -v codex \
+    && command -v claude \
+    && codex --version \
+    && claude --version
 USER svdo
 
-CMD ["node", "--version"]
+CMD ["sh", "-lc", "codex --version && claude --version"]

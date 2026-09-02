@@ -4,8 +4,13 @@ ARG SVDO_METER_REPO=https://github.com/brianofrokk3r/svdo-meter.git
 ARG SVDO_METER_REF=main
 ARG SVDO_METER_INSTALL_METHOD=release
 
+ENV RUSTUP_HOME=/opt/rustup \
+    CARGO_HOME=/opt/cargo \
+    PATH=/opt/cargo/bin:${PATH}
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
         curl \
         git \
@@ -14,9 +19,11 @@ RUN apt-get update \
         python3-venv \
         nodejs \
         npm \
-        cargo \
-        rustc \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain stable \
+    && rm /tmp/rustup-init.sh
 
 COPY scripts/install-svdo-meter.sh /usr/local/bin/install-svdo-meter
 RUN chmod +x /usr/local/bin/install-svdo-meter \

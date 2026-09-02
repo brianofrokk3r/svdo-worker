@@ -4,18 +4,21 @@ set -Eeuo pipefail
 repo="${SVDO_METER_REPO:-https://github.com/brianofrokk3r/svdo-meter.git}"
 ref="${SVDO_METER_REF:-main}"
 src="/tmp/svdo-meter-src"
-out="/usr/local/bin/svdo-meter"
+out="${SVDO_METER_BIN:-/usr/local/bin/svdo-meter}"
+install_root="$(dirname "$(dirname "${out}")")"
 method="${SVDO_METER_INSTALL_METHOD:-release}"
 
 install_from_release() {
   tmp="$(mktemp -d)"
   trap 'rm -rf "${tmp}"' RETURN
   curl -fsSL "https://raw.githubusercontent.com/brianofrokk3r/svdo-meter/${ref}/install.sh" -o "${tmp}/install.sh"
-  SVDO_METER_INSTALL_DIR="$(dirname "${out}")" sh "${tmp}/install.sh"
+  SVDO_METER_INSTALL_DIR="$(dirname "${out}")" bash "${tmp}/install.sh"
 }
 
 install_from_source() {
   rm -rf "${src}"
+  rm -f "${out}"
+
   if ! git clone --depth 1 --branch "${ref}" "${repo}" "${src}"; then
     printf 'install-svdo-meter: ref %s not found, trying repository default branch\n' "${ref}" >&2
     git clone --depth 1 "${repo}" "${src}"
@@ -23,9 +26,9 @@ install_from_source() {
   cd "${src}"
 
   if [[ -f crates/svdo-meter/Cargo.toml ]]; then
-    cargo install --path crates/svdo-meter --locked --root /usr/local
+    cargo install --force --path crates/svdo-meter --locked --root "${install_root}"
   elif [[ -f Cargo.toml ]]; then
-    cargo install --path . --locked --root /usr/local
+    cargo install --force --path . --locked --root "${install_root}"
   elif [[ -f package.json ]]; then
     npm install --omit=dev
     npm link

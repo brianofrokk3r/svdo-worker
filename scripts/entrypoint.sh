@@ -32,8 +32,17 @@ cd "${SVDO_WORKSPACE}"
 
 case "${SVDO_WORKER_MODE}" in
   harness)
-    ticket="${SVDO_TICKET_ID:-${SVDO_WORK_UNIT_ID:-local}}"
+    local_run_id="local-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    ticket="${SVDO_TICKET_ID:-${SVDO_WORK_UNIT_ID:-${SVDO_RUN_ID:-${local_run_id}}}}"
     harness="${SVDO_HARNESS:-${SVDO_AGENT:-codex}}"
+
+    if [[ "${harness}" == "codex" ]]; then
+      codex_home="${CODEX_HOME:-${SVDO_HOME}/.codex}"
+      codex_auth="${codex_home}/auth.json"
+      if [[ -z "${OPENAI_API_KEY:-}" && ! -s "${codex_auth}" ]]; then
+        die "codex auth not found; mount host auth with --volume \$HOME/.codex:/home/svdo/.codex:Z or pass --env OPENAI_API_KEY"
+      fi
+    fi
 
     meter_args=(run --ticket "${ticket}" --harness "${harness}" --workspace "${SVDO_WORKSPACE}")
     [[ -z "${SVDO_WORK_UNIT_ID:-}" ]] || meter_args+=(--label "${SVDO_WORK_UNIT_ID}")
