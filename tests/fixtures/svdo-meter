@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+case "${1:-}" in
+  --help|-h)
+    printf 'svdo-meter smoke fixture\n'
+    exit 0
+    ;;
+  --version)
+    printf 'svdo-meter smoke fixture 0.0.0\n'
+    exit 0
+    ;;
+esac
+
+mkdir -p "${SVDO_TMPDIR:?}/meter"
+printf '%s\n' "$*" > "${SVDO_TMPDIR}/meter/image-invocation.txt"
+printf '%s\n' "${SVDO_WORKSPACE:-}" > "${SVDO_TMPDIR}/meter/workspace.txt"
+printf '%s\n' "${SVDO_HOME:-}" > "${SVDO_TMPDIR}/meter/home.txt"
+printf 'metered\n'

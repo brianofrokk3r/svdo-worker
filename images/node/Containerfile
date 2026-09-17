@@ -1,0 +1,18 @@
+ARG SVDO_WORKER_BASE=localhost/svdo-worker-base:latest
+FROM ${SVDO_WORKER_BASE}
+
+ARG SVDO_CODEX_INSTALL=1
+ARG SVDO_CODEX_PACKAGE=@openai/codex
+ARG SVDO_CODEX_VERSION=latest
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+RUN if [ "${SVDO_CODEX_INSTALL}" = "1" ]; then \
+        npm install -g "${SVDO_CODEX_PACKAGE}@${SVDO_CODEX_VERSION}" \
+        && codex --version >/dev/null; \
+    fi
+USER svdo
+
+CMD ["codex", "--version"]
