@@ -3,6 +3,7 @@ FROM docker.io/library/debian:bookworm-slim AS meter-builder
 ARG SVDO_METER_REPO=https://github.com/brianofrokk3r/svdo-meter.git
 ARG SVDO_METER_REF=main
 ARG SVDO_METER_INSTALL_METHOD=release
+ARG SVDO_METER_FIXTURE_PATH=/tmp/svdo-meter-fixture
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -19,6 +20,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY scripts/install-svdo-meter.sh /usr/local/bin/install-svdo-meter
+COPY tests/fixtures/svdo-meter /tmp/svdo-meter-fixture
 RUN chmod +x /usr/local/bin/install-svdo-meter \
     && /usr/local/bin/install-svdo-meter
 
@@ -49,7 +51,8 @@ COPY --from=meter-builder /usr/local/bin/svdo-meter /usr/local/bin/svdo-meter
 COPY config/meter.yaml /etc/svdo-worker/meter.yaml
 COPY scripts/entrypoint.sh /usr/local/bin/svdo-worker-entrypoint
 
-RUN chmod +x /usr/local/bin/svdo-worker-entrypoint /usr/local/bin/svdo-meter
+RUN chmod +x /usr/local/bin/svdo-worker-entrypoint /usr/local/bin/svdo-meter \
+    && /usr/local/bin/svdo-meter --help >/dev/null
 
 ENV SVDO_WORKSPACE=/workspace \
     SVDO_HOME=/home/svdo \
