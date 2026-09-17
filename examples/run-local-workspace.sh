@@ -25,6 +25,13 @@ if [[ -n "${meter_config}" ]]; then
   config_mount=(--volume "${meter_config}:/etc/svdo-worker/meter.yaml:ro,Z")
 fi
 
+provider_env=()
+for name in OPENAI_API_KEY CODEX_API_KEY OPENAI_ORG_ID OPENAI_PROJECT_ID; do
+  if [[ -n "${!name:-}" ]]; then
+    provider_env+=(--env "${name}")
+  fi
+done
+
 podman run --rm -it \
   --userns=keep-id \
   --security-opt=no-new-privileges \
@@ -35,6 +42,7 @@ podman run --rm -it \
   --env SVDO_TICKET_ID="${SVDO_TICKET_ID:-LOCAL}" \
   --env SVDO_AGENT="${SVDO_AGENT:-codex}" \
   --env SVDO_METER_EXTRA_ARGS="${SVDO_METER_EXTRA_ARGS:-}" \
+  "${provider_env[@]}" \
   --env SVDO_HOME=/home/svdo \
   --env SVDO_TMPDIR=/tmp/svdo-worker \
   --volume "${workspace}:/workspace:Z" \

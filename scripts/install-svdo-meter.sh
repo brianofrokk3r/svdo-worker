@@ -7,6 +7,41 @@ src="/tmp/svdo-meter-src"
 out="/usr/local/bin/svdo-meter"
 method="${SVDO_METER_INSTALL_METHOD:-release}"
 fixture_path="${SVDO_METER_FIXTURE_PATH:-}"
+rust_min_major=1
+rust_min_minor=85
+
+rust_is_modern_enough() {
+  if ! command -v rustc >/dev/null 2>&1 || ! command -v cargo >/dev/null 2>&1; then
+    return 1
+  fi
+
+  version="$(rustc --version | awk '{print $2}')"
+  major="${version%%.*}"
+  rest="${version#*.}"
+  minor="${rest%%.*}"
+
+  [[ "${major}" =~ ^[0-9]+$ && "${minor}" =~ ^[0-9]+$ ]] || return 1
+  (( major > rust_min_major || (major == rust_min_major && minor >= rust_min_minor) ))
+}
+
+ensure_modern_rust() {
+  if rust_is_modern_enough; then
+    return 0
+  fi
+
+  printf 'install-svdo-meter: installing Rust %s.%s+ toolchain for source build\n' "${rust_min_major}" "${rust_min_minor}" >&2
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+  curl -fsSL https://sh.rustup.rs -o "${tmp}/rustup-init.sh"
+  RUSTUP_INIT_SKIP_PATH_CHECK=yes sh "${tmp}/rustup-init.sh" -y --profile minimal --default-toolchain stable
+  # shellcheck disable=SC1091
+  . "${HOME}/.cargo/env"
+
+  if ! rust_is_modern_enough; then
+    printf 'install-svdo-meter: Rust %s.%s+ is required to build svdo-meter from source\n' "${rust_min_major}" "${rust_min_minor}" >&2
+    exit 65
+  fi
+}
 
 install_from_release() {
   tmp="$(mktemp -d)"
@@ -24,9 +59,11 @@ install_from_source() {
   cd "${src}"
 
   if [[ -f crates/svdo-meter/Cargo.toml ]]; then
-    cargo install --path crates/svdo-meter --locked --root /usr/local
+    ensure_modern_rust
+    cargo install --path crates/svdo-meter --locked --root /usr/local --force
   elif [[ -f Cargo.toml ]]; then
-    cargo install --path . --locked --root /usr/local
+    ensure_modern_rust
+    cargo install --path . --locked --root /usr/local --force
   elif [[ -f package.json ]]; then
     npm install --omit=dev
     npm link
@@ -41,7 +78,10 @@ install_from_source() {
 }
 
 if [[ "${method}" == "release" ]]; then
-  install_from_release || install_from_source
+  if ! install_from_release; then
+    printf 'install-svdo-meter: release install failed, building from source\n' >&2
+    install_from_source
+  fi
 elif [[ "${method}" == "source" ]]; then
   install_from_source
 elif [[ "${method}" == "fixture" ]]; then

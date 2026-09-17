@@ -28,10 +28,14 @@ mkdir -p "${tmp}/workspace" "${tmp}/home" "${tmp}/tmp"
 chmod -R 0777 "${tmp}"
 
 meter_install_method="${SVDO_IMAGE_TEST_METER_INSTALL_METHOD:-fixture}"
+base_image="svdo-worker-base-test:latest"
+node_image="svdo-worker-node-test:latest"
+python_image="svdo-worker-python-test:latest"
+rust_image="svdo-worker-rust-test:latest"
 
 podman build \
   --build-arg "SVDO_METER_INSTALL_METHOD=${meter_install_method}" \
-  -t svdo-worker-base:latest \
+  -t "${base_image}" \
   -f "${repo_root}/images/base/Containerfile" \
   "${repo_root}"
 
@@ -41,7 +45,7 @@ podman run --rm \
   --cap-drop=all \
   --volume "${repo_root}:/workspace:Z" \
   --entrypoint /usr/local/bin/svdo-meter \
-  svdo-worker-base:latest \
+  "${base_image}" \
   --help
 
 if [[ "${meter_install_method}" == "fixture" ]]; then
@@ -56,7 +60,7 @@ if [[ "${meter_install_method}" == "fixture" ]]; then
     --env SVDO_AGENT=codex \
     --env SVDO_MODEL=gpt-5 \
     --env 'SVDO_METER_EXTRA_ARGS=--emit ndjson' \
-    svdo-worker-base:latest \
+    "${base_image}" \
     "image smoke command"
 
   grep -q -- "run --ticket IMAGE-1 --harness codex --workspace /workspace --output-dir /tmp/svdo-worker/meter --model gpt-5 --emit ndjson image smoke command" \
@@ -67,8 +71,8 @@ else
   printf 'skipping metered-run assertion for non-fixture meter install method: %s\n' "${meter_install_method}" >&2
 fi
 
-podman build -t svdo-worker-node:latest -f "${repo_root}/images/node/Containerfile" "${repo_root}"
-podman build -t svdo-worker-python:latest -f "${repo_root}/images/python/Containerfile" "${repo_root}"
-podman build -t svdo-worker-rust:latest -f "${repo_root}/images/rust/Containerfile" "${repo_root}"
+podman build --build-arg "SVDO_WORKER_BASE=localhost/${base_image}" --build-arg SVDO_CODEX_INSTALL=0 -t "${node_image}" -f "${repo_root}/images/node/Containerfile" "${repo_root}"
+podman build --build-arg "SVDO_WORKER_BASE=localhost/${base_image}" -t "${python_image}" -f "${repo_root}/images/python/Containerfile" "${repo_root}"
+podman build --build-arg "SVDO_WORKER_BASE=localhost/${base_image}" -t "${rust_image}" -f "${repo_root}/images/rust/Containerfile" "${repo_root}"
 
 printf '\nimage build validation passed\n'

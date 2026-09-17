@@ -198,7 +198,7 @@ podman run --rm \
 ## Image Variants
 
 - `svdo-worker-base`: Debian slim, `bash`, `ca-certificates`, `curl`, `git`, `jq`, and `svdo-meter`.
-- `svdo-worker-node`: base plus Debian `nodejs` and `npm`.
+- `svdo-worker-node`: base plus Debian `nodejs`, `npm`, and the Codex CLI.
 - `svdo-worker-python`: base plus `python3`, `python3-pip`, and `python3-venv`.
 - `svdo-worker-rust`: base plus `cargo`, `rustc`, `pkg-config`, and `build-essential`.
 
@@ -232,7 +232,7 @@ For release gates or CI jobs that must prove the container build/run contract, r
 SVDO_REQUIRE_PODMAN=1 bash tests/validate-image-build.sh
 ```
 
-By default the image validation builds with a test fixture meter so it can prove the container entrypoint invokes `svdo-meter run` without reaching the `svdo-meter` upstream installer or requiring agent authentication. To exercise the real installer, run:
+By default the image validation builds `svdo-worker-*-test:latest` images with a test fixture meter so it can prove the container entrypoint invokes `svdo-meter run` without reaching the `svdo-meter` upstream installer or requiring agent authentication. Fixture images print `metered` when invoked. The normal example tags such as `svdo-worker-base:latest` and `svdo-worker-node:latest` are reserved for real local runs. To exercise the real installer, run:
 
 ```bash
 SVDO_IMAGE_TEST_METER_INSTALL_METHOD=release bash tests/validate-image-build.sh
