@@ -3,6 +3,25 @@ set -Eeuo pipefail
 
 image="${SVDO_WORKER_IMAGE:-svdo-worker-base:latest}"
 workspace="${1:-$PWD}"
+state_dir="${SVDO_WORKER_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/svdo-worker/metadata-home}"
+tmp_dir="${SVDO_WORKER_TMP_DIR:-${TMPDIR:-/tmp}/svdo-worker-metadata}"
+meter_config="${SVDO_METER_CONFIG_FILE:-}"
+
+if [[ ! -d "${workspace}" ]]; then
+  printf 'workspace does not exist: %s\n' "${workspace}" >&2
+  exit 64
+fi
+
+mkdir -p "${state_dir}" "${tmp_dir}"
+
+config_mount=()
+if [[ -n "${meter_config}" ]]; then
+  if [[ ! -f "${meter_config}" ]]; then
+    printf 'meter config does not exist: %s\n' "${meter_config}" >&2
+    exit 64
+  fi
+  config_mount=(--volume "${meter_config}:/etc/svdo-worker/meter.yaml:ro,Z")
+fi
 
 podman run --rm -it \
   --userns=keep-id \
@@ -17,6 +36,11 @@ podman run --rm -it \
   --env SVDO_AGENT="${SVDO_AGENT:-codex}" \
   --env SVDO_MODEL="${SVDO_MODEL:-}" \
   --env SVDO_RUN_ID="${SVDO_RUN_ID:-local-run}" \
+  --env SVDO_HOME=/home/svdo \
+  --env SVDO_TMPDIR=/tmp/svdo-worker \
   --volume "${workspace}:/workspace:Z" \
+  --volume "${state_dir}:/home/svdo:Z" \
+  --volume "${tmp_dir}:/tmp/svdo-worker:Z" \
+  "${config_mount[@]}" \
   "${image}" \
   "Use the supplied SVDO metadata while working on this local task."

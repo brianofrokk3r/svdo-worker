@@ -6,6 +6,7 @@ ref="${SVDO_METER_REF:-main}"
 src="/tmp/svdo-meter-src"
 out="/usr/local/bin/svdo-meter"
 method="${SVDO_METER_INSTALL_METHOD:-release}"
+fixture_path="${SVDO_METER_FIXTURE_PATH:-}"
 
 install_from_release() {
   tmp="$(mktemp -d)"
@@ -43,6 +44,42 @@ if [[ "${method}" == "release" ]]; then
   install_from_release || install_from_source
 elif [[ "${method}" == "source" ]]; then
   install_from_source
+elif [[ "${method}" == "fixture" ]]; then
+  if [[ -n "${fixture_path}" ]]; then
+    if [[ ! -f "${fixture_path}" ]]; then
+      printf 'install-svdo-meter: fixture path does not exist: %s\n' "${fixture_path}" >&2
+      exit 65
+    fi
+    install -m 0755 "${fixture_path}" "${out}"
+  else
+    cat > "${out}" <<'METER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+case "${1:-}" in
+  --help|-h)
+    printf 'svdo-meter fixture\n'
+    printf 'usage: svdo-meter run [options] <prompt>\n'
+    exit 0
+    ;;
+  --version)
+    printf 'svdo-meter fixture 0.0.0\n'
+    exit 0
+    ;;
+esac
+
+if [[ "${1:-}" == "run" ]]; then
+  meter_dir="${SVDO_TMPDIR:-/tmp/svdo-worker}/meter"
+  mkdir -p "${meter_dir}"
+  printf '%s\n' "$*" > "${meter_dir}/image-invocation.txt"
+  printf '%s\n' "${SVDO_WORKSPACE:-}" > "${meter_dir}/workspace.txt"
+  printf '%s\n' "${SVDO_HOME:-}" > "${meter_dir}/home.txt"
+fi
+
+printf 'svdo-meter fixture invoked\n'
+METER
+    chmod +x "${out}"
+  fi
 else
   printf 'install-svdo-meter: unsupported install method: %s\n' "${method}" >&2
   exit 65
@@ -58,4 +95,12 @@ if [[ "${resolved}" != "${out}" ]]; then
   ln -sf "${resolved}" "${out}"
 fi
 
-"${out}" --version >/dev/null 2>&1 || true
+if [[ ! -x "${out}" ]]; then
+  printf 'install-svdo-meter: installed svdo-meter is not executable: %s\n' "${out}" >&2
+  exit 65
+fi
+
+if ! "${out}" --version >/dev/null 2>&1 && ! "${out}" --help >/dev/null 2>&1; then
+  printf 'install-svdo-meter: installed svdo-meter does not respond to --version or --help: %s\n' "${out}" >&2
+  exit 65
+fi
